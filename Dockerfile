@@ -8,7 +8,7 @@ ENV PATH=/lib/llvm-15/bin:/usr/local/cargo/bin:/root/.cargo/bin:$PATH \
     DOCKER_CONTAINER=1
 
 RUN apt-get update \
-    && apt-get -y install build-essential wget curl cmake git unzip patchelf graphviz python3 python3-pip lsb-release software-properties-common gnupg file libssl-dev openssl pkg-config libfontconfig libfontconfig1-dev zip \
+    && apt-get -y install build-essential wget curl cmake git unzip patchelf graphviz python3 python3-pip lsb-release software-properties-common gnupg file libssl-dev openssl pkg-config libfontconfig libfontconfig1-dev zip flex bison \
     && apt-get clean \
     && pip3 install wllvm
 
@@ -17,7 +17,9 @@ RUN wget https://apt.llvm.org/llvm.sh \
     && chmod +x llvm.sh \
     && ./llvm.sh 15 \
     && ln -s /usr/bin/clang-15 /usr/bin/clang \
-    && ln -s /usr/bin/clang++-15 /usr/bin/clang++
+    && ln -s /usr/bin/clang++-15 /usr/bin/clang++ \
+    && ln -s /usr/bin/llvm-link-15 /usr/bin/llvm-link \
+    && ln -s /usr/bin/opt-15 /usr/bin/opt
 
 RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --default-toolchain stable && rustup default stable
 
