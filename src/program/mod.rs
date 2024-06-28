@@ -194,7 +194,7 @@ impl Program {
         // compute density
         let builder = crate::analysis::adg::ADGBuilder::new();
         let adg = builder.sparse_build(cfg).context(format!(
-            "ADG build from program fialed:\n {}",
+            "ADG build from program failed:\n {}",
             self.statements
         ))?;
         let density = adg.compute_density();
