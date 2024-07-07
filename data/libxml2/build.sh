@@ -40,8 +40,8 @@ function build_oss_fuzz() {
 
 function copy_include() {
     cd ${LIB_BUILD}
-    mkdir -p include/libxml2/libxml
-    cp $WORK/build/include/libxml2/libxml/*.h include/libxml2/libxml
+    mkdir -p include/libxml
+    cp $WORK/build/include/libxml2/libxml/*.h include/libxml
 }
 
 function build_corpus() {
