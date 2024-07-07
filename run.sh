@@ -1,4 +1,3 @@
-nproc=8
 PROJECT=libpcap
 
 # pushd ./data/${PROJECT}
@@ -12,8 +11,8 @@ cargo run --bin harness -- ${PROJECT} fuse-fuzzer
 # And, you can execute the fuzzers you fused:
 cargo run --bin harness -- ${PROJECT} fuzzer-run
 
-# # After 24 hours execution(s), you should deduplicate the reported crashes by PromptFuzz:
-# cargo run --bin harness -- ${PROJECT} sanitize-crash
-# # Then, you can collect and verbose the code coverage of your fuzzers by:
-# cargo run --bin harness -- ${PROJECT} coverage collect
-# cargo run --bin harness -- ${PROJECT} coverage report
+# After 24 hours execution(s), you should deduplicate the reported crashes by PromptFuzz:
+cargo run --bin harness -- ${PROJECT} sanitize-crash
+# Then, you can collect and verbose the code coverage of your fuzzers by:
+cargo run --bin harness -- ${PROJECT} coverage collect
+cargo run --bin harness -- ${PROJECT} coverage report
