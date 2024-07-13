@@ -210,7 +210,7 @@ impl ProgramLogger {
             AsanError::FDSan => self.sc.fdsan += 1,
             AsanError::Others(_msg) => {
                 self.sc.other += 1;
-                //log::warn!("Meet unkown Asan err:\n{msg}");
+                log::warn!("Meet unkown Asan err:\n{_msg}");
             }
         }
     }
