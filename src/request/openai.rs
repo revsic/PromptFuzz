@@ -14,7 +14,7 @@ use async_openai::{
     types::{CreateCompletionRequest, CreateCompletionResponse},
     Client,
 };
-use eyre::Result;
+use eyre::{Report, Result};
 use once_cell::sync::OnceCell;
 
 use self::openai_billing::{load_openai_usage, log_openai_usage};
@@ -300,7 +300,6 @@ pub mod openai_billing {
     fn count_billing(model: &str, prompt_usage: u32, completion_usage: u32) -> Result<()> {
         let (prompt_price, completion_price) = match model {
             CHATGPT_MODEL => (CHATGPT_INPUTR_PRICE, CHATGPT_OUTPUT_PRICE),
-            CHATGPT_MODEL_LONG => (CHATGPT_LONG_INPUT_PRICE, CHATGPT_LONG_OUTPUT_PRICE),
             GPT4_MODEL => (GPT4_INPUT_PRICE, GPT4_OUTPUT_PRICE),
             _ => unimplemented!("Model {model} is not supported!"),
         };
@@ -364,7 +363,7 @@ fn create_chat_request(
     else if tokens < config::CHATGPT_CONTEXT_LIMIT {
         binding.model(config::CHATGPT_MODEL)
     } else {
-        binding.model(config::CHATGPT_MODEL_LONG)
+        return Err(Report::msg("Token length exceeds the context limit of GPT-3.5"));
     };
 
     let mut request = binding
