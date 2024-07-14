@@ -155,7 +155,7 @@ impl Schedule {
     }
 
     pub fn assemble_high_energy_combiantion(&self) -> Vec<&'static FuncGadget> {
-        log::info!("random assemble new prompt combination with their engies.");
+        log::info!("random assemble new prompt combination with their energies.");
         let len = rand_comb_len();
         let mut comb: Vec<&str> = Vec::new();
         let mut gadgets = Vec::new();
