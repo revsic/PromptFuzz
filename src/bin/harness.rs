@@ -279,16 +279,16 @@ fn archive(project: &'static str, suffix: &Option<String>) -> Result<()> {
         .stderr(Stdio::inherit())
         .output()?;
 
-    let _cmd = Command::new("coscli")
-        .current_dir(Deopt::get_crate_output_dir()?)
-        .arg("cp")
-        .arg(out.clone())
-        .arg(format!(
-            "cos://sbd-testing-1251316161/bench_archive/LLM_FUZZ/{project}/{out}"
-        ))
-        .stderr(Stdio::inherit())
-        .stdout(Stdio::inherit())
-        .output()?;
+    // let _cmd = Command::new("coscli")
+    //     .current_dir(Deopt::get_crate_output_dir()?)
+    //     .arg("cp")
+    //     .arg(out.clone())
+    //     .arg(format!(
+    //         "cos://sbd-testing-1251316161/bench_archive/LLM_FUZZ/{project}/{out}"
+    //     ))
+    //     .stderr(Stdio::inherit())
+    //     .stdout(Stdio::inherit())
+    //     .output()?;
     Ok(())
 }
 
