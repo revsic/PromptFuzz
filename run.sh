@@ -1,4 +1,5 @@
-PROJECT=libpcap
+# PROJECT=libpcap
+echo "PROJECT=$PROJECT"
 
 # pushd ./data/${PROJECT}
 # ./build.sh
