@@ -3,4 +3,7 @@ static_lib_name: libxml2.a
 dyn_lib_name: libxml2.so
 ban:
   ~
+extra_c_flags:
+  - -lz
+  - -llzma
 desc: libxml2 is an XML toolkit implemented in C, originally developed for the GNOME Project.
