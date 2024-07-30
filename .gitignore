@@ -1,3 +1,4 @@
+test.*
 /target
 /output
 /src/extern/__pycache__
