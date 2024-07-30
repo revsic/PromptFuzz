@@ -156,7 +156,7 @@ impl Executor {
 
     pub fn check_programs_are_correct(
         &self,
-        programs: &[Program],
+        programs: &[&Program],
         deopt: &Deopt,
     ) -> Result<Vec<Option<ProgramError>>> {
         let mut program_paths = Vec::new();

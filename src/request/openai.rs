@@ -2,6 +2,7 @@ use std::{process::Child, time::Duration};
 
 use crate::{
     config::{self, get_config, LLMModel},
+    execution::logger::ProgramError,
     is_critical_err,
     program::Program,
     FuzzerError,
@@ -9,7 +10,7 @@ use crate::{
 use async_openai::{
     types::{
         ChatCompletionRequestMessage, CreateChatCompletionRequest, CreateChatCompletionRequestArgs,
-        CreateChatCompletionResponse, CreateCompletionRequestArgs,
+        CreateChatCompletionResponse, CreateCompletionRequestArgs, Role
     },
     types::{CreateCompletionRequest, CreateCompletionResponse},
     Client,
@@ -50,7 +51,8 @@ impl Handler for OpenAIHanler {
             config::LLMModel::ChatGPT | config::LLMModel::GPT4 => {
                 let start = std::time::Instant::now();
                 let chat_msgs = prompt.to_chatgpt_message();
-                let mut programs = self.rt.block_on(generate_programs_by_chat(chat_msgs))?;
+                let mut programs = self.rt.block_on(
+                    generate_programs_by_chat(chat_msgs, config::get_sample_num()))?;
                 for program in programs.iter_mut() {
                     program.combination = prompt.get_combination()?;
                 }
@@ -75,9 +77,9 @@ impl Handler for OpenAIHanler {
                 if let PromptKind::Infill(_, suffix) = &prompt.kind {
                     let stop = suffix[..10].to_string();
                     self.rt
-                        .block_on(generate_infills_by_chat(chat_msgs, Some(stop)))
+                        .block_on(generate_infills_by_chat(chat_msgs, Some(stop), config::get_sample_num()))
                 } else {
-                    self.rt.block_on(generate_infills_by_chat(chat_msgs, None))
+                    self.rt.block_on(generate_infills_by_chat(chat_msgs, None, config::get_sample_num()))
                 }
             }
             config::LLMModel::Incoder => unreachable!(),
@@ -87,6 +89,76 @@ impl Handler for OpenAIHanler {
     fn stop(&mut self) -> eyre::Result<()> {
         //log_account_balance(&self.rt)?;
         Ok(())
+    }
+
+    fn feedback(&self, program: &Program, err_msg: &ProgramError) -> Option<eyre::Result<Program>> {
+        let config = config::get_config();
+        match err_msg {
+            ProgramError::Syntax(msg) => match config.generative {
+                config::LLMModel::ChatGPT | config::LLMModel::GPT4 => {
+                    let start = std::time::Instant::now();
+                    let prompt = super::prompt::Prompt{ 
+                        kind: super::prompt::PromptKind::Generate(program.combination.clone()),
+                    };
+                    let mut chat_msgs = prompt.to_chatgpt_message();
+                    chat_msgs.extend(
+                        [
+                            ChatCompletionRequestMessage {
+                                role: Role::Assistant,
+                                content: format!(
+                                    "```cpp\n{}\n```",
+                                    program.statements),
+                                name: None,
+                            },
+                            ChatCompletionRequestMessage {
+                                role: Role::User,
+                                content: format!("
+Given the above C fuzz harness and its build error message, fix the code to make it build for fuzzing.
+
+If there is undeclared identifier or unknown type name error, fix it by finding and including the related libraries.
+
+MUST RETURN THE FULL CODE, INCLUDING UNCHANGED PARTS.
+
+Below is the error to fix:
+The code has the following build issues:
+```
+{}
+```
+
+Fix code:
+1. Consider possible solutions for the issues listed above.
+2. Choose a solution that can maximize fuzzing result, which is utilizing the function under test and feeding it not null input.
+3. Apply the solutions to the original code.
+It's important to show the complete code, not only the fixed line.
+", msg),
+                                name: None,
+                            }
+                        ]
+                    );
+
+                    let response = self.rt.block_on(
+                        generate_programs_by_chat(chat_msgs, 1));
+                    if let Err(report) = response {
+                        return Some(Err(report));
+                    }
+                    
+                    let mut program = None;
+                    if let Some(_program) = response.unwrap().first() {
+                        let mut _program = _program.clone();
+                        let comb = prompt.get_combination();
+                        if let Err(report) = comb {
+                            return Some(Err(report));
+                        }
+                        _program.combination = comb.unwrap();
+                        program = Some(Ok(_program));
+                    }
+                    log::debug!("LLM Generate time: {}s", start.elapsed().as_secs());
+                    program
+                }
+                _ => None
+            }
+            _ => None
+        }
     }
 }
 
@@ -353,6 +425,7 @@ async fn get_complete_response(
 fn create_chat_request(
     msgs: Vec<ChatCompletionRequestMessage>,
     stop: Option<String>,
+    n: u8,
 ) -> Result<CreateChatCompletionRequest> {
     let config = get_config();
     let tokens = count_request_token_len(&msgs);
@@ -368,7 +441,7 @@ fn create_chat_request(
 
     let mut request = binding
         .messages(msgs)
-        .n(config::get_sample_num())
+        .n(n)
         .temperature(config::get_config().temperature)
         .stream(false);
     if let Some(stop) = stop {
@@ -435,8 +508,9 @@ pub async fn generate_programs_by_prefix(prefix: &str) -> Result<Vec<Program>> {
 /// Generate `SAMPLE_N` programs by chatting with instructions.
 pub async fn generate_programs_by_chat(
     chat_msgs: Vec<ChatCompletionRequestMessage>,
+    n: u8,
 ) -> Result<Vec<Program>> {
-    let request = create_chat_request(chat_msgs, None)?;
+    let request = create_chat_request(chat_msgs, None, n)?;
     let respond = get_chat_response(request).await?;
     if let Some(usage) = &respond.usage {
         log::trace!("Corpora usage: {usage:?}");
@@ -469,8 +543,9 @@ async fn generate_infills_by_request(prefix: &str, suffix: &str) -> Result<Vec<S
 async fn generate_infills_by_chat(
     chat_msgs: Vec<ChatCompletionRequestMessage>,
     stop: Option<String>,
+    n: u8,
 ) -> Result<Vec<String>> {
-    let request = create_chat_request(chat_msgs, stop)?;
+    let request = create_chat_request(chat_msgs, stop, n)?;
     let respond = get_chat_response(request).await?;
     if let Some(usage) = &respond.usage {
         log::trace!("Corpora usage: {usage:?}");

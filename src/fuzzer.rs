@@ -1,5 +1,5 @@
 use crate::{
-    config::{self, get_config, get_library_name},
+    config::{self, get_config, get_library_name, get_sample_num},
     deopt::Deopt,
     execution::{logger::{init_gtl, ProgramLogger}, Executor},
     feedback::{
@@ -117,7 +117,7 @@ impl Fuzzer {
 
     pub fn generate_until_n_success(
         &mut self,
-        prompt: &mut Prompt,
+        prompt: &Prompt,
         logger: &mut ProgramLogger,
     ) -> Result<Vec<Program>> {
         log::trace!(
@@ -125,10 +125,33 @@ impl Fuzzer {
             get_config().fuzz_round_succ
         );
         let mut succ_programs = Vec::new();
+        let mut failed_programs = Vec::new();
+        const RETRY_COUNT: usize = 5;
 
         while succ_programs.len() < get_config().fuzz_round_succ {
-            let mut programs = self.handler.generate(prompt)?;
-            for program in &mut programs {
+            let mut programs = Vec::new();
+            if failed_programs.len() >= get_sample_num() as usize {
+                for (i, program, error) in failed_programs.iter() {
+                    if *i > RETRY_COUNT {
+                        continue;
+                    }
+                    // if support feedback
+                    if let Some(response) = self.handler.feedback(program, error) {
+                        programs.push((*i + 1, response?));
+                    }
+                }
+                log::debug!("LLM tries to fix {}/{} programs.", programs.len(), failed_programs.len());
+                // truncate
+                failed_programs = Vec::new();
+            }
+            if programs.len() < get_sample_num() as usize {
+                programs.extend(
+                    self.handler.generate(prompt)?
+                    .into_iter()
+                    .map(|x| (0, x))
+                );
+            }
+            for (_, program) in &mut programs {
                 program.id = self.deopt.inc_seed_id();
             }
 
@@ -136,11 +159,15 @@ impl Fuzzer {
                 "LLM generated {} programs. Sanitize those programs!",
                 programs.len()
             );
+            let _programs: Vec<&Program> = programs.iter()
+                .map(|(_, x)| x)
+                .collect();
             let check_res = self
                 .executor
-                .check_programs_are_correct(&programs, &self.deopt)?;
+                .check_programs_are_correct(&_programs, &self.deopt)?;
             // Check each generated programs, and save thems according where they contains errors.
-            for (i, program) in programs.iter().enumerate() {
+            let mut _retry_logger = ProgramLogger::default();
+            for (i, (c, program)) in programs.iter().enumerate() {
                 let has_err = check_res
                     .get(i)
                     .unwrap_or_else(|| panic!("cannot obtain check_res at `{i}`"));
@@ -148,12 +175,24 @@ impl Fuzzer {
                 if let Some(err_msg) = has_err {
                     self.deopt.save_err_program(program, err_msg)?;
                     logger.log_err(err_msg);
+                    failed_programs.push((*c, program.clone(), err_msg.clone()));
+                    if *c > 0 {
+                        _retry_logger.log_err(err_msg);
+                    }
                 } else {
                     succ_programs.push(program.clone());
                     logger.log_succ();
+                    if *c > 0 {
+                        _retry_logger.log_succ();
+                    }
                 }
             }
+            log::debug!("##_GLOBAL_LOGGER");
             logger.print_succ_round();
+            if _retry_logger.get_gc_total() > 0 {
+                log::debug!("##_RETRY_LOGGER");
+                _retry_logger.print_succ_round();
+            }
             // if the combiantion continusely failed in a long time, shuffle the prompt to escape the bad combination;
             if self
                 .schedule
