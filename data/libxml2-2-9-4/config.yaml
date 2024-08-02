@@ -1,4 +1,4 @@
-project_name: libxml2
+project_name: libxml2-2-9-4
 static_lib_name: libxml2.a
 dyn_lib_name: libxml2.so
 ban:

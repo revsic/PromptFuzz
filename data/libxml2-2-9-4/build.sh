@@ -2,7 +2,7 @@
 
 source ../common.sh
 
-PROJECT_NAME=libxml2
+PROJECT_NAME=libxml2-2-9-4
 STALIB_NAME=libxml2.a
 DYNLIB_NAME=libxml2.so
 DIR=$(pwd)
@@ -47,26 +47,6 @@ function build_lib() {
 
 function build_oss_fuzz() {
     pwd
-    # cd $SRC/libxml2/fuzz
-    # make clean-corpus
-    # make fuzz.o
-
-    # for fuzzer in \
-    #     api html lint reader regexp schema uri valid xinclude xml xpath
-    # do
-    #     make $fuzzer.o
-    #     # Link with $CXX
-    #     $CXX $CXXFLAGS \
-    #         $fuzzer.o fuzz.o \
-    #         -o $OUT/$fuzzer \
-    #         $LIB_FUZZING_ENGINE \
-    #         $LIB_STORE_DIR/libxml2.a -Wl,-Bstatic -lz -llzma -Wl,-Bdynamic
-
-    #     if [ $fuzzer != api ]; then
-    #         [ -e seed/$fuzzer ] || make seed/$fuzzer.stamp
-    #         zip -j $OUT/${fuzzer}_seed_corpus.zip seed/$fuzzer/*
-    #     fi
-    # done
 }
 
 function copy_include() {
