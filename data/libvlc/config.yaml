@@ -1,5 +1,5 @@
 project_name: libvlc
-static_lib_name: libvlc.la
+static_lib_name: libvlc.a
 dyn_lib_name: libvlc.so
 ban:
   ~
