@@ -1,6 +1,0 @@
-project_name: libvlc
-static_lib_name: libvlc.a
-dyn_lib_name: libvlc.so
-ban:
-  ~
-desc: libVLC is the core engine and the interface to the multimedia framework on which VLC media player is based.
