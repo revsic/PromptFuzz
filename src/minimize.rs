@@ -25,9 +25,9 @@ pub fn minimize(deopt: &Deopt) -> Result<()> {
         if unique_branches.is_empty() {
             if seed.exists() {
                 log::info!("Program Seed triggers no unique branch and has been removed: {program_path:?}");
-                std::fs::remove_file(seed)?;
+                // std::fs::remove_file(seed)?;
             }
-            continue;
+            // continue;
         }
         log::info!("{program_path:?} is an unique seed");
         if !seed.exists() {
