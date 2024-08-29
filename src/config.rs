@@ -43,7 +43,7 @@ pub const RETRY_N: u8 = 5;
 
 pub const MAX_SAMPLE_LEN: usize = 20;
 
-pub const DEFAULT_COMB_LEN: usize = 5;
+pub const DEFAULT_COMB_LEN: usize = 10;
 
 pub static mut CONFIG_INSTANCE: Option<Config> = None;
 
