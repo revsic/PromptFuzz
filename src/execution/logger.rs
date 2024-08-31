@@ -5,7 +5,7 @@ use once_cell::sync::OnceCell;
 use regex::{Captures, Regex};
 
 
-#[derive(Debug, serde::Serialize, serde::Deserialize)]
+#[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
 pub enum ProgramError {
     Syntax(String),
     Link(String),

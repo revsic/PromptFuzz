@@ -1,4 +1,8 @@
-use crate::{config, execution::logger::get_gtl_mut, program::Program};
+use crate::{
+    config,
+    execution::logger::{get_gtl_mut, ProgramError},
+    program::Program,
+};
 
 use self::prompt::Prompt;
 
@@ -35,6 +39,10 @@ pub trait Handler {
     }
     /// stop the service behind of the handler
     fn stop(&mut self) -> eyre::Result<()>;
+    /// feedback for harness generation
+    fn feedback(&self, _program: &Program, _err_msg: &ProgramError) -> Option<eyre::Result<Program>> {
+        return None;
+    }
 }
 
 /// format the url of server to send requests.
