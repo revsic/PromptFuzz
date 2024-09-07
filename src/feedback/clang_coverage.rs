@@ -641,7 +641,16 @@ pub mod utils {
     /// parse line coverage of fuzzer (not library) from lcov data
     pub fn parse_fuzzer_lcov_data(lcov: &str, file: &Path) -> Result<Vec<CovLine>> {
         let mut de = crate::program::serde::Deserializer::from_input(lcov);
-        de.consume_token_until(file.to_str().unwrap())?;
+        if let Err(_) = de.consume_token_until(file.to_str().unwrap()) {
+            let mut file = file.to_str().unwrap();
+            match file.find("/output/") {
+                Some(len) => {
+                    file = &file[len..];
+                }
+                None => return Err(eyre::eyre!("cannot find token `/output/`"))
+            };
+            de.consume_token_until(file)?;
+        }
 
         let mut cov_lines = Vec::new();
         de.eat_token_until("FNH")?;
