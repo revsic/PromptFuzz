@@ -173,7 +173,8 @@ impl Fuzzer {
         Ok(())
     }
 
-    pub fn is_converge(&self) -> bool {
+    pub fn is_converge(&mut self) -> bool {
+        self.observer.compute_library_api_coverage().unwrap();
         return self.observer.is_library_api_all_covered() || get_quota_cost() >= get_config().query_budget;
     }
 
