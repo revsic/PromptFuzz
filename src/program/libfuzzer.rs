@@ -138,22 +138,19 @@ impl LibFuzzer {
             crate::program::infer::infer_constraints(&succ_programs, &self.deopt)?;
         }
 
-        let mut test_corpus = vec![];
-        for program in &self.programs {
-            let corpora = find_testbed_corpora(program, &self.deopt)?;
-            test_corpus.push(corpora);
-        }
-
         let executor = Executor::default();
         let mut tasks = Vec::new();
+        let mut corpus = Vec::new();
         for (i, program) in self.programs.iter().enumerate() {
-            let corpora = &test_corpus[i];
+            let corpora = find_testbed_corpora(program, &self.deopt)?;
             let i = i + 1;
             tasks.push(program.clone());
+            corpus.push(corpora);
 
             if i % self.core == 0 || i == self.programs.len() {
-                executor.concurrent_transform(&tasks, self.core, true, Some(corpora))?;
+                executor.concurrent_transform(&tasks, self.core, true, &corpus)?;
                 tasks.clear();
+                corpus.clear();
                 log::debug!("transformed {i}/{}", self.programs.len());
             }
         }
