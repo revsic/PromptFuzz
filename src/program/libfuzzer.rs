@@ -5,7 +5,7 @@ use crate::deopt::{self, Deopt};
 use crate::execution::logger::ProgramError;
 use crate::execution::max_cpu_count;
 use crate::program::gadget::get_func_gadget;
-use crate::program::infer::dynamic_infer::find_testbed_corpora;
+use crate::program::infer::dynamic_infer::find_all_hit_corpora;
 use crate::program::transform::Transformer;
 use crate::program::Executor;
 use base64::Engine;
@@ -142,12 +142,11 @@ impl LibFuzzer {
         let mut tasks = Vec::new();
         let mut corpus = Vec::new();
         for (i, program) in self.programs.iter().enumerate() {
-            let corpora = find_testbed_corpora(program, &self.deopt)?;
+            let _corpus = find_all_hit_corpora(program, &self.deopt)?;
+            tasks.extend((0.._corpus.len()).map(|_| program.clone()));
+            corpus.extend(_corpus.into_iter());
             let i = i + 1;
-            tasks.push(program.clone());
-            corpus.push(corpora);
-
-            if i % self.core == 0 || i == self.programs.len() {
+            if tasks.len() % self.core == 0 || i == self.programs.len() {
                 executor.concurrent_transform(&tasks, self.core, true, &corpus)?;
                 tasks.clear();
                 corpus.clear();

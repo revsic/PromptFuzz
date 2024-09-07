@@ -301,6 +301,51 @@ fn get_corpora_coverage(
     Ok(cov)
 }
 
+pub fn find_all_hit_corpora(program_path: &Path, deopt: &Deopt) -> Result<Vec<PathBuf>> {
+    log::debug!("Find testbed corpora for program: {:?}", program_path);
+    static mut CACHE: Vec<PathBuf> = Vec::new();
+    // compile the given fuzzer
+    let executor = Executor::new(deopt)?;
+    let seed_id = Program::load_from_path(program_path)?.id;
+    executor.compile_seed(seed_id)?;
+    // prepare for coverage check
+    let fuzzer_code = deopt.get_work_seed_by_id(seed_id)?;
+    let work_dir = get_file_dirname(&fuzzer_code);
+    let fuzzer_cov: PathBuf = fuzzer_code.with_extension("cov.out");
+
+    // minimize the shared corpus first to reduce time cost.
+    let corpus_dir: PathBuf = [work_dir.clone(), "corpus".into()].iter().collect();
+    if corpus_dir.exists() {
+        std::fs::remove_dir_all(&corpus_dir)?;
+    }
+    let fuzzer_bin = fuzzer_code.with_extension("out");
+    executor.minimize_corpus(
+        &fuzzer_bin,
+        &corpus_dir,
+        &executor.deopt.get_library_shared_corpus_dir()?,
+    )?;
+
+    let corpus_files = crate::deopt::utils::read_all_files_in_dir(&corpus_dir)?;
+
+    // find all coverage
+    let mut hit = Vec::new();
+    for path in unsafe { CACHE.iter().chain(corpus_files.iter()) } {
+        let cov = get_corpora_coverage(
+            &fuzzer_code, &fuzzer_cov, path, &executor);
+        if let Err(err) = cov {
+            log::error!("{err}");
+            continue;
+        }
+        let cov = cov?;
+        // if it does not hit all branches from critical path
+        if sanitize_by_fuzzer_coverage(&fuzzer_code, deopt, &cov)? {
+            continue;
+        }
+        hit.push(path.clone());
+    }
+    Ok(hit)
+}
+
 /// Find a testbed corpora for a program. The testbed corpora should be good enough to cover the program's code.
 pub fn find_testbed_corpora(program_path: &Path, deopt: &Deopt) -> Result<PathBuf> {
     log::debug!("Find testbed corpora for program: {:?}", program_path);
