@@ -174,10 +174,7 @@ impl Fuzzer {
     }
 
     pub fn is_converge(&self) -> bool {
-        if self.quiet_round >= get_config().fuzz_converge_round || get_quota_cost() >= get_config().query_budget{
-            return true;
-        }
-        false
+        return self.observer.is_library_api_all_covered() || get_quota_cost() >= get_config().query_budget;
     }
 
     pub fn is_stuck(&self, len: usize) -> bool {
