@@ -329,7 +329,13 @@ pub fn find_all_hit_corpora(program_path: &Path, deopt: &Deopt) -> Result<Vec<Pa
 
     // find all coverage
     let mut hit = Vec::new();
-    for path in unsafe { CACHE.iter().chain(corpus_files.iter()) } {
+    for (non_cache, path) in unsafe {
+        corpus_files
+            .iter()
+            .map(|x| (true, x))
+            .chain(CACHE.iter().map(|x| (false, x)))
+            .take(10)
+    } {
         let cov = get_corpora_coverage(
             &fuzzer_code, &fuzzer_cov, path, &executor);
         if let Err(err) = cov {
@@ -342,6 +348,11 @@ pub fn find_all_hit_corpora(program_path: &Path, deopt: &Deopt) -> Result<Vec<Pa
             continue;
         }
         hit.push(path.clone());
+        if non_cache {
+            unsafe {
+                CACHE.push(path.clone());
+            }
+        }
     }
     Ok(hit)
 }
