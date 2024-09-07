@@ -138,12 +138,23 @@ impl LibFuzzer {
             crate::program::infer::infer_constraints(&succ_programs, &self.deopt)?;
         }
 
+        let drive_dir = self.deopt.get_library_driver_dir()?;
+        let mut last = crate::deopt::utils::read_sort_dir(&drive_dir)?.len();
+
         let executor = Executor::default();
         let mut tasks = Vec::new();
         let mut corpus = Vec::new();
         for (i, program) in self.programs.iter().enumerate() {
             let _corpus = find_all_hit_corpora(program, &self.deopt)?;
-            tasks.extend((0.._corpus.len()).map(|_| program.clone()));
+            for _ in 0.._corpus.len() {
+                let mut dst_path = drive_dir.clone();
+                dst_path.push(format!("id_{number:>0width$}.cc", number=last, width=6));
+                last += 1;
+
+                std::fs::copy(program, &dst_path)
+                    .context(format!("Unable to copy {program:?} to {dst_path:?}"))?;
+                tasks.push(dst_path);
+            }
             corpus.extend(_corpus.into_iter());
             let i = i + 1;
             if tasks.len() % self.core == 0 || i == self.programs.len() {
